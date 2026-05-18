@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .user-info {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .menu-option {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: transform 0.3s;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+        }
+        .menu-option:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(102,126,234,0.3);
+        }
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>📋 MENÚ PRINCIPAL</h1>
+            <div class="user-info" id="userInfo">Cargando...</div>
+            <div id="menuOptions"></div>
+            <button class="logout-btn" onclick="logout()">🚪 CERRAR SESIÓN</button>
+        </div>
+    </div>
+
+    <script>
+        const usuario = JSON.parse(sessionStorage.getItem('usuarioActual'));
+        if (!usuario) window.location.href = 'index.html';
+        
+        document.getElementById('userInfo').innerHTML = `
+            <strong>Bienvenido:</strong> ${usuario.nombre}<br>
+            <strong>Rol:</strong> ${usuario.rol === 'admin' ? '👑 Administrador' : 
+                                    usuario.rol === 'docente' ? '👨‍🏫 Docente' : '🎓 Alumno'}<br>
+            <strong>Correo:</strong> ${usuario.correo}
+        `;
+        
+        const menuOptions = document.getElementById('menuOptions');
+        if (usuario.rol === 'admin') {
+            menuOptions.innerHTML = `<div class="menu-option" onclick="window.location.href='administrador.html'">👑 ADMINISTRADOR</div>`;
+        } else if (usuario.rol === 'docente') {
+            menuOptions.innerHTML = `<div class="menu-option" onclick="window.location.href='maestro.html'">👨‍🏫 DOCENTE</div>`;
+        } else {
+            menuOptions.innerHTML = `<div class="menu-option" onclick="window.location.href='alumno.html'">🎓 ALUMNO</div>`;
+        }
+        
+        function logout() {
+            sessionStorage.removeItem('usuarioActual');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

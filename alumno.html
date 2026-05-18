@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alumno - Tomar Examen</title>
+    <style>
+        /* mismos estilos que antes, los omito por brevedad */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container { max-width: 800px; width: 100%; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 { color: white; text-align: center; margin-bottom: 20px; }
+        h2, h3 { color: #333; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.3s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+        .btn-menu { background: #f39c12; }
+        .btn-success { background: #00b894; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 15px 0; }
+        .warning { background: #fde8e8; color: #e74c3c; padding: 15px; border-radius: 10px; margin: 15px 0; font-weight: bold; }
+        .hidden { display: none; }
+        .pregunta-card { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 15px 0; border-left: 5px solid #00b894; }
+        .opcion-radio { display: block; margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        textarea, input[type="text"], input[type="radio"] { margin: 10px 0; padding: 10px; width: 100%; border: 2px solid #e0e0e0; border-radius: 8px; }
+        .timer { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 1.5em; border-radius: 10px; margin-bottom: 20px; }
+        .folio-input { width: 100%; padding: 15px; font-size: 1.2em; text-align: center; letter-spacing: 2px; border: 2px solid #667eea; border-radius: 10px; margin: 20px 0; }
+        .resultado-card { background: #f8f9fa; border-radius: 10px; padding: 15px; margin: 10px 0; border-left: 5px solid #00b894; }
+        .calificacion-aprobado { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 12px; }
+        .calificacion-pendiente { background: #ffeaa7; color: #d63031; padding: 4px 8px; border-radius: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎓 TOMAR EXAMEN</h1>
+
+    <!-- Panel de ingreso de folio -->
+    <div id="panelIngreso" class="card">
+        <div class="info-box" id="alumnoInfo"></div>
+        <button class="btn-menu" onclick="window.location.href='menu.html'">◀ VOLVER AL MENÚ</button>
+        <h2>🔑 INGRESA TU FOLIO</h2>
+        <input type="text" id="inputFolio" class="folio-input" placeholder="Ej: FISI-20250321-1234">
+        <button onclick="validarFolio()" class="btn-success" style="width:100%">✅ INGRESAR</button>
+        <button onclick="verMisResultados()" style="margin-top:10px;">📊 MIS RESULTADOS</button>
+    </div>
+
+    <!-- Panel del examen -->
+    <div id="panelExamen" class="card hidden">
+        <div class="timer" id="timerDisplay">30:00</div>
+        <div class="warning" id="advertencias">⚠️ Advertencias: 0/3</div>
+        <div id="preguntasContainer"></div>
+        <button class="btn-success" onclick="enviarRespuestas()" style="width:100%">✅ ENVIAR EXAMEN</button>
+        <button onclick="cancelarExamen()">❌ CANCELAR</button>
+    </div>
+
+    <!-- Panel de resultados -->
+    <div id="panelResultados" class="card hidden">
+        <div class="info-box" id="resultadosInfo"></div>
+        <button class="btn-menu" onclick="volverIngreso()">◀ VOLVER</button>
+        <div id="resultadosLista"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBQcATGJPrVAgtGOdDnLf_-dwnStm63fJ8",
+        authDomain: "programacion-wed-16af8.firebaseapp.com",
+        projectId: "programacion-wed-16af8"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const usuario = JSON.parse(sessionStorage.getItem('usuarioActual'));
+    if (!usuario || usuario.rol !== 'alumno') { alert("Acceso no autorizado"); window.location.href = 'index.html'; }
+    document.getElementById('alumnoInfo').innerHTML = `<strong>Bienvenido:</strong> ${usuario.nombre}`;
+
+    let examenActual = null;
+    let tiempoRestante = 1800;
+    let intervalTimer = null;
+    let advertencias = 0;
+    let eventosActivos = [];
+
+    // ========== VALIDAR FOLIO ==========
+    window.validarFolio = async function() {
+        const codigo = document.getElementById('inputFolio').value.trim();
+        if (!codigo) return alert("Ingresa un folio");
+        try {
+            const docentesRef = collection(db, "panel", "docentes", "maestros");
+            const docentes = await getDocs(docentesRef);
+            let folioEncontrado = null;
+            let docenteId = null;
+            let materiaId = null;
+
+            for (const maestroDoc of docentes.docs) {
+                const materiasRef = collection(db, "panel", "docentes", "maestros", maestroDoc.id, "materias");
+                const materias = await getDocs(materiasRef);
+                for (const materiaDoc of materias.docs) {
+                    const foliosRef = collection(db, "panel", "docentes", "maestros", maestroDoc.id, "materias", materiaDoc.id, "folios");
+                    const folios = await getDocs(foliosRef);
+                    for (const folioDoc of folios.docs) {
+                        const f = folioDoc.data();
+                        if (f.codigo === codigo && f.alumnoId === usuario.id && !f.usado) {
+                            folioEncontrado = { id: folioDoc.id, ...f };
+                            docenteId = maestroDoc.id;
+                            materiaId = materiaDoc.id;
+                            break;
+                        }
+                    }
+                    if (folioEncontrado) break;
+                }
+                if (folioEncontrado) break;
+            }
+
+            if (!folioEncontrado) {
+                alert("❌ Folio no válido o ya usado.");
+                return;
+            }
+
+            // Marcar folio como usado
+            const folioRef = doc(db, "panel", "docentes", "maestros", docenteId, "materias", materiaId, "folios", folioEncontrado.id);
+            await updateDoc(folioRef, { usado: true });
+
+            // Obtener datos del docente y materia
+            const docenteDoc = await getDoc(doc(db, "panel", "docentes", "maestros", docenteId));
+            const nombreDocente = docenteDoc.data().nombre;
+            const preguntas = folioEncontrado.preguntas || [];
+            if (preguntas.length === 0) {
+                alert("Este examen no tiene preguntas asignadas.");
+                return;
+            }
+            const materiaNombre = preguntas[0].materiaNombre || "Materia";
+
+            examenActual = {
+                preguntas: preguntas,
+                docenteNombre: nombreDocente,
+                materiaNombre: materiaNombre
+            };
+
+            iniciarExamen();
+        } catch (error) {
+            console.error(error);
+            alert("Error al validar folio: " + error.message);
+        }
+    };
+
+    function iniciarExamen() {
+        document.getElementById('panelIngreso').classList.add('hidden');
+        document.getElementById('panelExamen').classList.remove('hidden');
+        document.getElementById('preguntasContainer').innerHTML = generarHTMLPreguntas();
+        tiempoRestante = 1800;
+        actualizarTimer();
+        if (intervalTimer) clearInterval(intervalTimer);
+        intervalTimer = setInterval(() => {
+            if (tiempoRestante <= 0) {
+                clearInterval(intervalTimer);
+                alert("⏰ Tiempo finalizado. El examen se enviará automáticamente.");
+                enviarRespuestas(true);
+            } else {
+                tiempoRestante--;
+                actualizarTimer();
+            }
+        }, 1000);
+        activarAntiTrampa();
+    }
+
+    function generarHTMLPreguntas() {
+        let html = '';
+        let contador = 1;
+        examenActual.preguntas.forEach((p, idx) => {
+            html += `<div class="pregunta-card">`;
+            html += `<strong>${contador++}. ${escapeHtml(p.texto)}</strong><br>`;
+            if (p.tipo === 'abierta') {
+                html += `<textarea id="respuesta_${idx}" placeholder="Escribe tu respuesta..."></textarea>`;
+            } else {
+                html += `<div class="opcion-radio">`;
+                html += `<input type="radio" name="pregunta_${idx}" value="A"> A) ${escapeHtml(p.opciones.A)}<br>`;
+                html += `<input type="radio" name="pregunta_${idx}" value="B"> B) ${escapeHtml(p.opciones.B)}<br>`;
+                html += `<input type="radio" name="pregunta_${idx}" value="C"> C) ${escapeHtml(p.opciones.C)}<br>`;
+                html += `<input type="radio" name="pregunta_${idx}" value="D"> D) ${escapeHtml(p.opciones.D)}<br>`;
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        return html;
+    }
+
+    function actualizarTimer() {
+        const minutos = Math.floor(tiempoRestante / 60);
+        const segundos = tiempoRestante % 60;
+        document.getElementById('timerDisplay').innerText = `${minutos.toString().padStart(2,'0')}:${segundos.toString().padStart(2,'0')}`;
+    }
+
+    function activarAntiTrampa() {
+        advertencias = 0;
+        document.getElementById('advertencias').innerHTML = `⚠️ Advertencias: 0/3`;
+        const visibilityHandler = () => { if(document.hidden) registrarIntento("Cambio de pestaña"); };
+        const blurHandler = () => { registrarIntento("Cambio de ventana"); };
+        const copyHandler = e => e.preventDefault();
+        const pasteHandler = e => e.preventDefault();
+        const contextHandler = e => e.preventDefault();
+        document.addEventListener("visibilitychange", visibilityHandler);
+        window.addEventListener("blur", blurHandler);
+        document.addEventListener("copy", copyHandler);
+        document.addEventListener("paste", pasteHandler);
+        document.addEventListener("contextmenu", contextHandler);
+        eventosActivos = [visibilityHandler, blurHandler, copyHandler, pasteHandler, contextHandler];
+    }
+
+    function desactivarAntiTrampa() {
+        if (eventosActivos.length) {
+            document.removeEventListener("visibilitychange", eventosActivos[0]);
+            window.removeEventListener("blur", eventosActivos[1]);
+            document.removeEventListener("copy", eventosActivos[2]);
+            document.removeEventListener("paste", eventosActivos[3]);
+            document.removeEventListener("contextmenu", eventosActivos[4]);
+        }
+    }
+
+    async function registrarIntento(evento) {
+        advertencias++;
+        document.getElementById('advertencias').innerHTML = `⚠️ Advertencias: ${advertencias}/3`;
+        await addDoc(collection(db, "Advertencias"), {
+            tipo: "intento", alumno: usuario.id, alumnoNombre: usuario.nombre,
+            evento: evento, fecha: new Date()
+        });
+        if (advertencias >= 3) { alert("❌ Máximo de advertencias alcanzado"); await enviarRespuestas(true); }
+        else alert(`⚠️ ${evento} - Advertencia ${advertencias}/3`);
+    }
+
+    window.enviarRespuestas = async function(automatico = false) {
+        if (intervalTimer) clearInterval(intervalTimer);
+        desactivarAntiTrampa();
+        let respuestas = [];
+        let correctas = 0;
+        let totalMultiple = 0;
+        for (let i = 0; i < examenActual.preguntas.length; i++) {
+            const p = examenActual.preguntas[i];
+            let respuesta = '';
+            let esCorrecta = false;
+            if (p.tipo === 'abierta') {
+                respuesta = document.getElementById(`respuesta_${i}`)?.value || '';
+                esCorrecta = null;
+            } else {
+                totalMultiple++;
+                const radios = document.getElementsByName(`pregunta_${i}`);
+                for (let radio of radios) {
+                    if (radio.checked) {
+                        respuesta = radio.value;
+                        esCorrecta = (respuesta === p.respuestaCorrecta);
+                        if (esCorrecta) correctas++;
+                        break;
+                    }
+                }
+            }
+            respuestas.push({ pregunta: p.texto, respuesta: respuesta || '[sin respuesta]', correcta: esCorrecta });
+        }
+        const porcentaje = totalMultiple > 0 ? Math.round((correctas / totalMultiple) * 100) : 0;
+        await addDoc(collection(db, "Resultado"), {
+            tipo: "resultado", alumno: usuario.id, alumnoNombre: usuario.nombre,
+            materia: examenActual.materiaNombre, docente: examenActual.docenteNombre,
+            respuestas: respuestas, correctas: correctas, totalMultiple: totalMultiple,
+            porcentaje: porcentaje, advertencias: advertencias, estado: "pendiente", fecha: new Date()
+        });
+        alert(automatico ? `❌ Examen finalizado por seguridad\n📊 Porcentaje (múltiple): ${porcentaje}%` : `✅ Examen enviado\n📊 Porcentaje (múltiple): ${porcentaje}%`);
+        cancelarExamen();
+    };
+
+    window.cancelarExamen = function() {
+        if (intervalTimer) clearInterval(intervalTimer);
+        desactivarAntiTrampa();
+        document.getElementById('panelExamen').classList.add('hidden');
+        document.getElementById('panelIngreso').classList.remove('hidden');
+        examenActual = null;
+        advertencias = 0;
+        document.getElementById('inputFolio').value = '';
+    };
+
+    window.verMisResultados = async function() {
+        const resultadosRef = collection(db, "Resultado");
+        const q = query(resultadosRef, where("alumno", "==", usuario.id));
+        const resultados = await getDocs(q);
+        if (resultados.empty) { alert("No tienes resultados aún."); return; }
+        let html = '<h3>📋 MIS EXÁMENES</h3>';
+        resultados.forEach(doc => {
+            const r = doc.data();
+            const fecha = r.fecha ? new Date(r.fecha.seconds * 1000).toLocaleString() : 'Fecha desconocida';
+            const estado = r.estado === 'calificado' ? '✅ Calificado' : '⏳ Pendiente';
+            const claseEstado = r.estado === 'calificado' ? 'calificacion-aprobado' : 'calificacion-pendiente';
+            const nota = r.estado === 'calificado' ? `${r.porcentaje}%` : 'Pendiente';
+            html += `<div class="resultado-card"><strong>📚 ${r.materia}</strong><br>👨‍🏫 ${r.docente}<br>📅 ${fecha}<br><span class="${claseEstado}">${estado}</span><br>Nota: ${nota}</div>`;
+        });
+        document.getElementById('resultadosLista').innerHTML = html;
+        document.getElementById('panelIngreso').classList.add('hidden');
+        document.getElementById('panelResultados').classList.remove('hidden');
+    };
+
+    window.volverIngreso = function() {
+        document.getElementById('panelResultados').classList.add('hidden');
+        document.getElementById('panelIngreso').classList.remove('hidden');
+    };
+
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tabla con Exportación a Excel</title>
+
+<!-- Librería para exportar a Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+body{
+    font-family: Arial;
+    text-align: center;
+    background: #f4f4f4;
+}
+
+input{
+    padding: 8px;
+    margin: 5px;
+}
+
+button{
+    padding: 10px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+table{
+    margin: auto;
+    border-collapse: collapse;
+    width: 60%;
+    background: white;
+}
+
+th, td{
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Registro de Personas</h2>
+
+<input type="text" id="nombre" placeholder="Nombre">
+<input type="number" id="edad" placeholder="Edad">
+
+<br>
+
+<button onclick="agregar()">Agregar</button>
+<button onclick="exportarExcel()">Guardar en Excel</button>
+
+<br><br>
+
+<table id="tabla">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Edad</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+function agregar(){
+    let nombre = document.getElementById("nombre").value;
+    let edad = document.getElementById("edad").value;
+
+    if(nombre === "" || edad === ""){
+        alert("Completa los campos");
+        return;
+    }
+
+    let tabla = document.getElementById("tabla").getElementsByTagName('tbody')[0];
+    let fila = tabla.insertRow();
+
+    fila.insertCell(0).innerText = nombre;
+    fila.insertCell(1).innerText = edad;
+
+    // limpiar campos
+    document.getElementById("nombre").value = "";
+    document.getElementById("edad").value = "";
+}
+
+function exportarExcel(){
+    let tabla = document.getElementById("tabla");
+    let wb = XLSX.utils.table_to_book(tabla, {sheet: "Datos"});
+    XLSX.writeFile(wb, "datos.xlsx");
+}
+</script>
+
+</body>
+</html>

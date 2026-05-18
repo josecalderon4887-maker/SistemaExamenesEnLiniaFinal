@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Administrador - Gestión Completa</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1300px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 3px solid #f0f0f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102,126,234,0.3);
+        }
+        .btn-success {
+            background: #00b894;
+        }
+        .btn-warning {
+            background: #f39c12;
+        }
+        .btn-menu {
+            background: #f39c12;
+        }
+        .usuario-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 5px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .usuario-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .foto-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 50%;
+            background: #ddd;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .text-info {
+            flex: 1;
+        }
+        .usuario-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: #f0f0f0;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .hidden {
+            display: none;
+        }
+        .chart-container {
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .foto-preview {
+            max-width: 100px;
+            margin-top: 5px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        .camera-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .camera-video {
+            width: 90%;
+            max-width: 500px;
+            transform: scaleX(-1);
+        }
+        .camera-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .error-input {
+            border-color: #e74c3c !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>👑 PANEL ADMINISTRADOR</h1>
+    <div class="card">
+        <div class="info-box" id="adminInfo"></div>
+        <button class="btn-menu" onclick="window.location.href='menu.html'">◀ VOLVER AL MENÚ</button>
+        <div class="tabs">
+            <div class="tab active" onclick="mostrarTab('Alumnos')">🎓 ALUMNOS</div>
+            <div class="tab" onclick="mostrarTab('Maestros')">👨‍🏫 MAESTROS</div>
+            <div class="tab" onclick="mostrarTab('Admins')">👑 ADMINISTRADORES</div>
+            <div class="tab" onclick="mostrarTab('Reportes')">📊 REPORTES</div>
+        </div>
+
+        <!-- ALUMNOS -->
+        <div id="tabAlumnos">
+            <h2>➕ REGISTRAR NUEVO ALUMNO</h2>
+            <div class="grid-2">
+                <div><input type="text" id="nombreAlumno" placeholder="Nombre completo *" oninput="validarNombreInput(this)"></div>
+                <div><input type="email" id="correoAlumno" placeholder="Correo electrónico *" oninput="validarEmailInput(this)"></div>
+                <div><select id="generoAlumno"><option value="">Género</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select></div>
+                <div><input type="text" id="telefonoAlumno" placeholder="Teléfono (solo números)" oninput="validarTelefonoInput(this)"></div>
+                <div><input type="text" id="direccionAlumno" placeholder="Dirección" oninput="validarDireccionInput(this)"></div>
+                <div><input type="text" id="gradoAlumno" placeholder="Grado / Año (ej: 3ro)" oninput="validarGradoInput(this)"></div>
+                <div>
+                    <label>Foto:</label>
+                    <div class="flex-row"><button type="button" class="btn-warning" onclick="tomarFotoConCamara('alumno')">📷 Tomar foto</button></div>
+                    <img id="previewAlumno" class="foto-preview hidden"><input type="hidden" id="fotoAlumnoBase64">
+                </div>
+            </div>
+            <button onclick="crearAlumno()" class="btn-success">CREAR ALUMNO</button>
+            <div class="flex-row" style="margin-top:15px;">
+                <button onclick="exportarListaPDF('alumnos')" class="btn-warning">📄 DESCARGAR PDF</button>
+                <button onclick="exportarExcelAlumnos()" class="btn-warning">📊 DESCARGAR EXCEL</button>
+            </div>
+            <h2>📋 LISTA DE ALUMNOS</h2>
+            <button onclick="cargarAlumnos()">ACTUALIZAR LISTA</button>
+            <div id="listaAlumnos"></div>
+        </div>
+
+        <!-- MAESTROS -->
+        <div id="tabMaestros" class="hidden">
+            <h2>➕ REGISTRAR NUEVO MAESTRO</h2>
+            <div class="grid-2">
+                <div><input type="text" id="nombreMaestro" placeholder="Nombre completo *" oninput="validarNombreInput(this)"></div>
+                <div><input type="email" id="correoMaestro" placeholder="Correo electrónico *" oninput="validarEmailInput(this)"></div>
+                <div><select id="generoMaestro"><option value="">Género</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select></div>
+                <div><input type="text" id="telefonoMaestro" placeholder="Teléfono (solo números)" oninput="validarTelefonoInput(this)"></div>
+                <div><input type="text" id="direccionMaestro" placeholder="Dirección" oninput="validarDireccionInput(this)"></div>
+                <div><input type="text" id="especialidadMaestro" placeholder="Especialidad (ej: Matemáticas)" oninput="validarEspecialidadInput(this)"></div>
+                <div><button type="button" class="btn-warning" onclick="tomarFotoConCamara('maestro')">📷 Tomar foto</button><img id="previewMaestro" class="foto-preview hidden"><input type="hidden" id="fotoMaestroBase64"></div>
+            </div>
+            <button onclick="crearMaestro()" class="btn-success">CREAR MAESTRO</button>
+            <div class="flex-row"><button onclick="exportarListaPDF('maestros')" class="btn-warning">📄 DESCARGAR PDF</button><button onclick="exportarExcelMaestros()" class="btn-warning">📊 DESCARGAR EXCEL</button></div>
+            <h2>📋 LISTA DE MAESTROS</h2>
+            <button onclick="cargarMaestros()">ACTUALIZAR LISTA</button>
+            <div id="listaMaestros"></div>
+        </div>
+
+        <!-- ADMINISTRADORES -->
+        <div id="tabAdmins" class="hidden">
+            <h2>➕ REGISTRAR NUEVO ADMINISTRADOR</h2>
+            <div class="grid-2">
+                <div><input type="text" id="nombreAdmin" placeholder="Nombre completo *" oninput="validarNombreInput(this)"></div>
+                <div><input type="email" id="correoAdmin" placeholder="Correo electrónico *" oninput="validarEmailInput(this)"></div>
+                <div><input type="text" id="telefonoAdmin" placeholder="Teléfono (solo números)" oninput="validarTelefonoInput(this)"></div>
+            </div>
+            <button onclick="crearAdmin()" class="btn-success">CREAR ADMINISTRADOR</button>
+            <h2>📋 LISTA DE ADMINISTRADORES</h2>
+            <button onclick="cargarAdmins()">ACTUALIZAR LISTA</button>
+            <div id="listaAdmins"></div>
+        </div>
+
+        <!-- REPORTES -->
+        <div id="tabReportes" class="hidden">
+            <h2>📊 REPORTES ESTADÍSTICOS</h2>
+            <div class="flex-row" style="justify-content: space-between;">
+                <div><label>Tipo de gráfica:</label><select id="tipoGrafica" onchange="actualizarGrafico()"><option value="pie">Pastel</option><option value="bar">Barras</option><option value="doughnut">Dona</option><option value="polarArea">Área Polar</option></select></div>
+                <button onclick="actualizarGrafico()" class="btn-success">ACTUALIZAR DATOS</button>
+            </div>
+            <div class="chart-container"><canvas id="generoChart" width="400" height="400"></canvas></div>
+            <div id="graficoInfo" class="info-box"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, setDoc, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBQcATGJPrVAgtGOdDnLf_-dwnStm63fJ8",
+        authDomain: "programacion-wed-16af8.firebaseapp.com",
+        projectId: "programacion-wed-16af8"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const usuario = JSON.parse(sessionStorage.getItem('usuarioActual'));
+    if (!usuario || usuario.rol !== 'admin') window.location.href = 'index.html';
+    document.getElementById('adminInfo').innerHTML = `<strong>Bienvenido:</strong> ${usuario.nombre}`;
+
+    let chartInstance = null;
+
+    // ========== VALIDACIONES DE CAMPOS ==========
+    // Nombre: solo letras, espacios, acentos
+    function validarNombre(nombre) { return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre); }
+    function validarNombreInput(input) {
+        const val = input.value.trim();
+        if (val && !validarNombre(val)) {
+            input.classList.add('error-input');
+            alert("El nombre solo puede contener letras y espacios.");
+            input.value = val.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+            input.classList.remove('error-input');
+        } else {
+            input.classList.remove('error-input');
+        }
+    }
+
+    // Email: formato válido
+    function validarEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+    function validarEmailInput(input) {
+        const val = input.value.trim();
+        if (val && !validarEmail(val)) {
+            input.classList.add('error-input');
+            alert("Correo electrónico no válido.");
+        } else {
+            input.classList.remove('error-input');
+        }
+    }
+
+    // Teléfono: solo dígitos, longitud entre 7 y 15 (opcional)
+    function validarTelefono(telefono) { return telefono === '' || /^\d{7,15}$/.test(telefono); }
+    function validarTelefonoInput(input) {
+        const val = input.value.trim();
+        if (val && !/^\d*$/.test(val)) {
+            input.classList.add('error-input');
+            alert("El teléfono solo debe contener números.");
+            input.value = val.replace(/\D/g, '');
+            input.classList.remove('error-input');
+        } else if (val && !validarTelefono(val)) {
+            input.classList.add('error-input');
+            alert("El teléfono debe tener entre 7 y 15 dígitos.");
+        } else {
+            input.classList.remove('error-input');
+        }
+    }
+
+    // Dirección: permite letras, números, espacios, puntos, comas, guiones
+    function validarDireccion(direccion) { return direccion === '' || /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.,\-]+$/.test(direccion); }
+    function validarDireccionInput(input) {
+        const val = input.value.trim();
+        if (val && !validarDireccion(val)) {
+            input.classList.add('error-input');
+            alert("Dirección inválida (use solo letras, números, espacios, puntos o guiones).");
+            input.value = val.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.,\-]/g, '');
+            input.classList.remove('error-input');
+        } else {
+            input.classList.remove('error-input');
+        }
+    }
+
+    // Grado / Año: permite letras, números, espacios, puntos y guiones
+    function validarGrado(grado) { return grado === '' || /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.\-]+$/.test(grado); }
+    function validarGradoInput(input) {
+        const val = input.value.trim();
+        if (val && !validarGrado(val)) {
+            input.classList.add('error-input');
+            alert("Grado inválido (use solo letras, números, espacios, puntos o guiones).");
+            input.value = val.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.\-]/g, '');
+            input.classList.remove('error-input');
+        } else {
+            input.classList.remove('error-input');
+        }
+    }
+
+    // Especialidad: similar a grado
+    function validarEspecialidad(esp) { return esp === '' || /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.\-]+$/.test(esp); }
+    function validarEspecialidadInput(input) {
+        const val = input.value.trim();
+        if (val && !validarEspecialidad(val)) {
+            input.classList.add('error-input');
+            alert("Especialidad inválida (use solo letras, números, espacios, puntos o guiones).");
+            input.value = val.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.\-]/g, '');
+            input.classList.remove('error-input');
+        } else {
+            input.classList.remove('error-input');
+        }
+    }
+
+    window.mostrarTab = function(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        ['Alumnos','Maestros','Admins','Reportes'].forEach(t => document.getElementById(`tab${t}`).classList.add('hidden'));
+        document.getElementById(`tab${tab}`).classList.remove('hidden');
+        if (tab === 'Alumnos') cargarAlumnos();
+        if (tab === 'Maestros') cargarMaestros();
+        if (tab === 'Admins') cargarAdmins();
+        if (tab === 'Reportes') actualizarGrafico();
+    };
+
+    // ===== TOMAR FOTO CON CÁMARA =====
+    window.tomarFotoConCamara = async function(tipo) {
+        const modal = document.createElement('div');
+        modal.className = 'camera-modal';
+        const video = document.createElement('video');
+        video.className = 'camera-video';
+        video.autoplay = true;
+        video.playsInline = true;
+        const canvas = document.createElement('canvas');
+        canvas.style.display = 'none';
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'camera-buttons';
+        const capturarBtn = document.createElement('button');
+        capturarBtn.textContent = '📸 Capturar';
+        capturarBtn.className = 'btn-success';
+        const cerrarBtn = document.createElement('button');
+        cerrarBtn.textContent = '❌ Cerrar';
+        cerrarBtn.className = 'btn-warning';
+        buttonsDiv.appendChild(capturarBtn);
+        buttonsDiv.appendChild(cerrarBtn);
+        modal.appendChild(video);
+        modal.appendChild(canvas);
+        modal.appendChild(buttonsDiv);
+        document.body.appendChild(modal);
+        let stream = null;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = stream;
+        } catch (err) {
+            alert('No se pudo acceder a la cámara.');
+            document.body.removeChild(modal);
+            return;
+        }
+        capturarBtn.onclick = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+            const previewId = `preview${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+            const hiddenId = `foto${tipo.charAt(0).toUpperCase() + tipo.slice(1)}Base64`;
+            document.getElementById(previewId).src = dataURL;
+            document.getElementById(previewId).classList.remove('hidden');
+            document.getElementById(hiddenId).value = dataURL;
+            stream.getTracks().forEach(t => t.stop());
+            document.body.removeChild(modal);
+        };
+        cerrarBtn.onclick = () => {
+            stream.getTracks().forEach(t => t.stop());
+            document.body.removeChild(modal);
+        };
+    };
+
+    // ===== EXPORTAR PDF =====
+    window.exportarListaPDF = async function(tipo) {
+        let usuarios = [], titulo = '';
+        if (tipo === 'alumnos') {
+            const snapshot = await getDocs(collection(db, "panel", "alumnos", "alumnos"));
+            snapshot.forEach(d => usuarios.push(d.data()));
+            titulo = 'Lista de Alumnos';
+        } else {
+            const snapshot = await getDocs(collection(db, "panel", "docentes", "maestros"));
+            snapshot.forEach(d => usuarios.push(d.data()));
+            titulo = 'Lista de Maestros';
+        }
+        if (usuarios.length === 0) { alert('No hay registros.'); return; }
+        const contenido = `<div style="font-family:Arial;padding:20px;"><h1 style="text-align:center;">${titulo}</h1><h3>Generado: ${new Date().toLocaleString()}</h3><hr><table style="width:100%;border-collapse:collapse;"><thead><tr><th>Nombre</th><th>Correo</th><th>Género</th><th>Teléfono</th><th>Dirección</th>${tipo==='alumnos'?'<th>Grado</th>':'<th>Especialidad</th>'}</tr></thead><tbody>${usuarios.map(u => `<tr><td>${u.nombre||''}</td><td>${u.correo||''}</td><td>${u.genero||''}</td><td>${u.telefono||''}</td><td>${u.direccion||''}</td><td>${tipo==='alumnos'?u.grado||'':u.especialidad||''}</td>`).join('')}</tbody></table></div>`;
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`<!DOCTYPE html><html><head><title>${titulo}</title><style>body{font-family:Arial;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background:#f2f2f2;}</style></head><body>${contenido}<button onclick="window.print()">🖨️ Guardar PDF</button></body></html>`);
+        printWindow.document.close();
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+    };
+
+    // ===== EXPORTAR EXCEL =====
+    window.exportarExcelAlumnos = async function() {
+        const snapshot = await getDocs(collection(db, "panel", "alumnos", "alumnos"));
+        const datos = [];
+        snapshot.forEach(d => { const u = d.data(); datos.push({ Nombre: u.nombre||'', Correo: u.correo||'', Género: u.genero||'', Teléfono: u.telefono||'', Dirección: u.direccion||'', Grado: u.grado||'' }); });
+        if (!datos.length) { alert('No hay alumnos.'); return; }
+        const ws = XLSX.utils.json_to_sheet(datos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
+        XLSX.writeFile(wb, `alumnos_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+    };
+    window.exportarExcelMaestros = async function() {
+        const snapshot = await getDocs(collection(db, "panel", "docentes", "maestros"));
+        const datos = [];
+        snapshot.forEach(d => { const u = d.data(); datos.push({ Nombre: u.nombre||'', Correo: u.correo||'', Género: u.genero||'', Teléfono: u.telefono||'', Dirección: u.direccion||'', Especialidad: u.especialidad||'' }); });
+        if (!datos.length) { alert('No hay maestros.'); return; }
+        const ws = XLSX.utils.json_to_sheet(datos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Maestros');
+        XLSX.writeFile(wb, `maestros_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+    };
+
+    // ===== CRUD ALUMNOS =====
+    window.crearAlumno = async function() {
+        const nombre = document.getElementById('nombreAlumno').value.trim();
+        const correo = document.getElementById('correoAlumno').value.trim();
+        if (!nombre || !correo) return alert("Nombre y correo son obligatorios");
+        if (!validarNombre(nombre)) return alert("El nombre solo puede contener letras y espacios.");
+        if (!validarEmail(correo)) return alert("Correo electrónico no válido.");
+        const telefono = document.getElementById('telefonoAlumno').value.trim();
+        if (!validarTelefono(telefono)) return alert("El teléfono debe tener entre 7 y 15 dígitos, o dejarlo vacío.");
+        const direccion = document.getElementById('direccionAlumno').value.trim();
+        if (!validarDireccion(direccion)) return alert("Dirección inválida (use solo letras, números, espacios, puntos o guiones).");
+        const grado = document.getElementById('gradoAlumno').value.trim();
+        if (!validarGrado(grado)) return alert("Grado inválido.");
+        const genero = document.getElementById('generoAlumno').value;
+        const foto = document.getElementById('fotoAlumnoBase64').value;
+        const alumnosRef = collection(db, "panel", "alumnos", "alumnos");
+        const existente = await getDocs(query(alumnosRef, where("correo", "==", correo)));
+        if (!existente.empty) return alert(`❌ Ya existe un alumno con correo ${correo}`);
+        const alumnoId = "alumno_" + Date.now();
+        await setDoc(doc(db, "panel", "alumnos", "alumnos", alumnoId), {
+            nombre, correo, rol: "alumno", genero, telefono, direccion, grado, foto: foto || null
+        });
+        alert("✅ Alumno creado");
+        cargarAlumnos();
+        // Limpiar formulario
+        document.getElementById('nombreAlumno').value = '';
+        document.getElementById('correoAlumno').value = '';
+        document.getElementById('generoAlumno').value = '';
+        document.getElementById('telefonoAlumno').value = '';
+        document.getElementById('direccionAlumno').value = '';
+        document.getElementById('gradoAlumno').value = '';
+        document.getElementById('previewAlumno').classList.add('hidden');
+        document.getElementById('fotoAlumnoBase64').value = '';
+    };
+    window.cargarAlumnos = async function() {
+        const alumnos = await getDocs(collection(db, "panel", "alumnos", "alumnos"));
+        let html = '';
+        alumnos.forEach(doc => {
+            const data = doc.data();
+            const fotoHtml = data.foto ? `<img src="${data.foto}" class="foto-thumb">` : '<div class="foto-thumb" style="background:#ccc; display:flex; align-items:center; justify-content:center;">📷</div>';
+            html += `<div class="usuario-card"><div class="usuario-info">${fotoHtml}<div class="text-info"><strong>🎓 ${data.nombre}</strong><br>📧 ${data.correo}<br>${data.genero?`⚥ Género: ${data.genero}<br>`:''}${data.telefono?`📞 ${data.telefono}<br>`:''}${data.direccion?`🏠 ${data.direccion}<br>`:''}📚 Grado: ${data.grado||'No especificado'}</div></div><div class="usuario-buttons"><button onclick="editarAlumno('${doc.id}')" class="btn-warning">✏️ Editar</button><button onclick="eliminarAlumno('${doc.id}')" class="btn-warning" style="background:#e74c3c;">🗑️ Eliminar</button></div></div>`;
+        });
+        document.getElementById('listaAlumnos').innerHTML = html || 'No hay alumnos';
+    };
+    window.editarAlumno = async function(id) {
+        const docRef = doc(db, "panel", "alumnos", "alumnos", id);
+        const data = (await getDoc(docRef)).data();
+        const nuevoNombre = prompt("Nuevo nombre:", data.nombre);
+        if (!nuevoNombre) return;
+        if (!validarNombre(nuevoNombre)) return alert("El nombre solo puede contener letras.");
+        const nuevoCorreo = prompt("Nuevo correo:", data.correo);
+        if (!nuevoCorreo) return;
+        if (!validarEmail(nuevoCorreo)) return alert("Correo no válido.");
+        const nuevoGenero = prompt("Nuevo género (Masculino/Femenino/Otro):", data.genero||'');
+        let nuevoTelefono = prompt("Nuevo teléfono:", data.telefono||'');
+        if (nuevoTelefono && !validarTelefono(nuevoTelefono)) return alert("Teléfono inválido (solo dígitos, 7-15).");
+        const nuevaDireccion = prompt("Nueva dirección:", data.direccion||'');
+        if (nuevaDireccion && !validarDireccion(nuevaDireccion)) return alert("Dirección inválida.");
+        const nuevoGrado = prompt("Nuevo grado:", data.grado||'');
+        if (nuevoGrado && !validarGrado(nuevoGrado)) return alert("Grado inválido.");
+        await updateDoc(docRef, { nombre: nuevoNombre, correo: nuevoCorreo, genero: nuevoGenero, telefono: nuevoTelefono||'', direccion: nuevaDireccion||'', grado: nuevoGrado||'' });
+        alert("✅ Alumno actualizado");
+        cargarAlumnos();
+    };
+    window.eliminarAlumno = async function(id) {
+        if (confirm("¿Eliminar?")) {
+            await deleteDoc(doc(db, "panel", "alumnos", "alumnos", id));
+            alert("✅ Eliminado");
+            cargarAlumnos();
+        }
+    };
+
+    // ===== CRUD MAESTROS =====
+    window.crearMaestro = async function() {
+        const nombre = document.getElementById('nombreMaestro').value.trim();
+        const correo = document.getElementById('correoMaestro').value.trim();
+        if (!nombre || !correo) return alert("Nombre y correo obligatorios");
+        if (!validarNombre(nombre)) return alert("El nombre solo puede contener letras.");
+        if (!validarEmail(correo)) return alert("Correo electrónico no válido.");
+        const telefono = document.getElementById('telefonoMaestro').value.trim();
+        if (!validarTelefono(telefono)) return alert("Teléfono inválido (solo dígitos, 7-15) o vacío.");
+        const direccion = document.getElementById('direccionMaestro').value.trim();
+        if (!validarDireccion(direccion)) return alert("Dirección inválida.");
+        const especialidad = document.getElementById('especialidadMaestro').value.trim();
+        if (!validarEspecialidad(especialidad)) return alert("Especialidad inválida.");
+        const genero = document.getElementById('generoMaestro').value;
+        const foto = document.getElementById('fotoMaestroBase64').value;
+        const maestrosRef = collection(db, "panel", "docentes", "maestros");
+        const existente = await getDocs(query(maestrosRef, where("correo", "==", correo)));
+        if (!existente.empty) return alert(`❌ Ya existe un maestro con correo ${correo}`);
+        const maestroId = "maestro_" + Date.now();
+        await setDoc(doc(db, "panel", "docentes", "maestros", maestroId), {
+            nombre, correo, rol: "docente", genero, telefono, direccion, especialidad, foto: foto || null
+        });
+        alert("✅ Maestro creado");
+        cargarMaestros();
+        limpiarCamposMaestro();
+    };
+    window.cargarMaestros = async function() {
+        const maestros = await getDocs(collection(db, "panel", "docentes", "maestros"));
+        let html = '';
+        maestros.forEach(doc => {
+            const data = doc.data();
+            const fotoHtml = data.foto ? `<img src="${data.foto}" class="foto-thumb">` : '<div class="foto-thumb" style="background:#ccc;">📷</div>';
+            html += `<div class="usuario-card"><div class="usuario-info">${fotoHtml}<div class="text-info"><strong>👨‍🏫 ${data.nombre}</strong><br>📧 ${data.correo}<br>${data.genero?`⚥ Género: ${data.genero}<br>`:''}${data.telefono?`📞 ${data.telefono}<br>`:''}${data.direccion?`🏠 ${data.direccion}<br>`:''}🎓 Especialidad: ${data.especialidad||'No especificada'}</div></div><div class="usuario-buttons"><button onclick="editarMaestro('${doc.id}')" class="btn-warning">✏️ Editar</button><button onclick="eliminarMaestro('${doc.id}')" class="btn-warning" style="background:#e74c3c;">🗑️ Eliminar</button></div></div>`;
+        });
+        document.getElementById('listaMaestros').innerHTML = html || 'No hay maestros';
+    };
+    window.editarMaestro = async function(id) {
+        const docRef = doc(db, "panel", "docentes", "maestros", id);
+        const data = (await getDoc(docRef)).data();
+        const nuevoNombre = prompt("Nuevo nombre:", data.nombre);
+        if (!nuevoNombre) return;
+        if (!validarNombre(nuevoNombre)) return alert("El nombre solo puede contener letras.");
+        const nuevoCorreo = prompt("Nuevo correo:", data.correo);
+        if (!nuevoCorreo) return;
+        if (!validarEmail(nuevoCorreo)) return alert("Correo no válido.");
+        const nuevoGenero = prompt("Nuevo género:", data.genero||'');
+        let nuevoTelefono = prompt("Nuevo teléfono:", data.telefono||'');
+        if (nuevoTelefono && !validarTelefono(nuevoTelefono)) return alert("Teléfono inválido.");
+        const nuevaDireccion = prompt("Nueva dirección:", data.direccion||'');
+        if (nuevaDireccion && !validarDireccion(nuevaDireccion)) return alert("Dirección inválida.");
+        const nuevaEspecialidad = prompt("Nueva especialidad:", data.especialidad||'');
+        if (nuevaEspecialidad && !validarEspecialidad(nuevaEspecialidad)) return alert("Especialidad inválida.");
+        await updateDoc(docRef, {
+            nombre: nuevoNombre, correo: nuevoCorreo, genero: nuevoGenero,
+            telefono: nuevoTelefono||'', direccion: nuevaDireccion||'', especialidad: nuevaEspecialidad||''
+        });
+        alert("✅ Maestro actualizado");
+        cargarMaestros();
+    };
+    window.eliminarMaestro = async function(id) {
+        if (confirm("¿Eliminar? Se perderán sus materias.")) {
+            await deleteDoc(doc(db, "panel", "docentes", "maestros", id));
+            alert("✅ Eliminado");
+            cargarMaestros();
+        }
+    };
+    function limpiarCamposMaestro() {
+        ['nombreMaestro','correoMaestro','generoMaestro','telefonoMaestro','direccionMaestro','especialidadMaestro'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('previewMaestro').classList.add('hidden');
+        document.getElementById('fotoMaestroBase64').value = '';
+    }
+
+    // ===== CRUD ADMINISTRADORES =====
+    window.crearAdmin = async function() {
+        const nombre = document.getElementById('nombreAdmin').value.trim();
+        const correo = document.getElementById('correoAdmin').value.trim();
+        if (!nombre || !correo) return alert("Nombre y correo obligatorios");
+        if (!validarNombre(nombre)) return alert("El nombre solo puede contener letras.");
+        if (!validarEmail(correo)) return alert("Correo electrónico no válido.");
+        const telefono = document.getElementById('telefonoAdmin').value.trim();
+        if (!validarTelefono(telefono)) return alert("Teléfono inválido (solo dígitos, 7-15) o vacío.");
+        const adminsRef = collection(db, "panel", "administrador", "usuarios");
+        const existente = await getDocs(query(adminsRef, where("correo", "==", correo)));
+        if (!existente.empty) return alert("❌ Ya existe un administrador con ese correo.");
+        const adminId = "admin_" + Date.now();
+        await setDoc(doc(db, "panel", "administrador", "usuarios", adminId), { nombre, correo, rol: "admin", telefono });
+        alert("✅ Administrador creado");
+        cargarAdmins();
+        document.getElementById('nombreAdmin').value = '';
+        document.getElementById('correoAdmin').value = '';
+        document.getElementById('telefonoAdmin').value = '';
+    };
+    window.cargarAdmins = async function() {
+        const admins = await getDocs(collection(db, "panel", "administrador", "usuarios"));
+        let html = '';
+        admins.forEach(doc => {
+            const data = doc.data();
+            html += `<div class="usuario-card"><div class="usuario-info"><div class="text-info"><strong>👑 ${data.nombre}</strong><br>📧 ${data.correo}<br>${data.telefono?`📞 ${data.telefono}<br>`:''}</div></div><div class="usuario-buttons"><button onclick="editarAdmin('${doc.id}')" class="btn-warning">✏️ Editar</button><button onclick="eliminarAdmin('${doc.id}')" class="btn-warning" style="background:#e74c3c;">🗑️ Eliminar</button></div></div>`;
+        });
+        document.getElementById('listaAdmins').innerHTML = html || 'No hay administradores';
+    };
+    window.editarAdmin = async function(id) {
+        const docRef = doc(db, "panel", "administrador", "usuarios", id);
+        const data = (await getDoc(docRef)).data();
+        const nuevoNombre = prompt("Nuevo nombre:", data.nombre);
+        if (!nuevoNombre) return;
+        if (!validarNombre(nuevoNombre)) return alert("Nombre inválido.");
+        const nuevoCorreo = prompt("Nuevo correo:", data.correo);
+        if (!nuevoCorreo) return;
+        if (!validarEmail(nuevoCorreo)) return alert("Correo no válido.");
+        const nuevoTelefono = prompt("Nuevo teléfono:", data.telefono||'');
+        if (nuevoTelefono && !validarTelefono(nuevoTelefono)) return alert("Teléfono inválido.");
+        await updateDoc(docRef, { nombre: nuevoNombre, correo: nuevoCorreo, telefono: nuevoTelefono||'' });
+        alert("✅ Administrador actualizado");
+        cargarAdmins();
+    };
+    window.eliminarAdmin = async function(id) {
+        if (confirm("¿Eliminar?")) {
+            await deleteDoc(doc(db, "panel", "administrador", "usuarios", id));
+            alert("✅ Eliminado");
+            cargarAdmins();
+        }
+    };
+
+    // ===== GRÁFICO =====
+    window.actualizarGrafico = async function() {
+        const alumnos = await getDocs(collection(db, "panel", "alumnos", "alumnos"));
+        const maestros = await getDocs(collection(db, "panel", "docentes", "maestros"));
+        let masculino = 0, femenino = 0, otro = 0;
+        alumnos.forEach(d => { const g = d.data().genero; if(g==='Masculino') masculino++; else if(g==='Femenino') femenino++; else otro++; });
+        maestros.forEach(d => { const g = d.data().genero; if(g==='Masculino') masculino++; else if(g==='Femenino') femenino++; else otro++; });
+        const total = masculino + femenino + otro;
+        document.getElementById('graficoInfo').innerHTML = `<strong>Distribución de género</strong><br>Total: ${total}<br>🟢 Masculino: ${masculino} (${total?((masculino/total)*100).toFixed(1):0}%)<br>🔴 Femenino: ${femenino} (${total?((femenino/total)*100).toFixed(1):0}%)<br>🟡 Otro: ${otro} (${total?((otro/total)*100).toFixed(1):0}%)`;
+        const tipo = document.getElementById('tipoGrafica').value;
+        const ctx = document.getElementById('generoChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, { type: tipo, data: { labels: ['Masculino', 'Femenino', 'Otro'], datasets: [{ data: [masculino, femenino, otro], backgroundColor: ['#3498db', '#e84393', '#f39c12'] }] }, options: { responsive: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} (${((ctx.raw/total)*100).toFixed(1)}%)` } } } } });
+    };
+
+    // Inicializar
+    cargarAlumnos();
+</script>
+</body>
+</html>

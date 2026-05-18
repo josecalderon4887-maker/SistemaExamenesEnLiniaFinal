@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docente - Panel Completo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; width: 100%; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 { color: white; text-align: center; margin-bottom: 20px; }
+        h2, h3 { color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0 15px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 15px; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.3s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+        .btn-success { background: #00b894; }
+        .btn-warning { background: #f39c12; }
+        .btn-sm { padding: 5px 10px; font-size: 13px; margin: 2px; }
+        .btn-danger { background: #e74c3c; }
+        .btn-menu { background: #f39c12; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 15px 0; }
+        .hidden { display: none; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: #f0f0f0;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .tab.active { background: #667eea; color: white; }
+        .flex-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .pregunta-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 5px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .pregunta-checkbox { width: 25px; height: 25px; cursor: pointer; }
+        .pregunta-texto { flex: 1; }
+        .folio-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 5px solid #00b894;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .folio-codigo { font-family: monospace; font-size: 1.1em; font-weight: bold; }
+        .estado-disponible { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; }
+        .estado-usado { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>👨‍🏫 PANEL DOCENTE</h1>
+    <div class="card">
+        <div class="info-box" id="docenteInfo"></div>
+        <button class="btn-menu" onclick="window.location.href='menu.html'">◀ VOLVER AL MENÚ</button>
+        <div class="tabs">
+            <div class="tab active" onclick="mostrarTab('Crear')">📝 CREAR / EDITAR EXAMEN</div>
+            <div class="tab" onclick="mostrarTab('Banco')">📚 BANCO DE PREGUNTAS</div>
+            <div class="tab" onclick="mostrarTab('Folios')">🔑 GENERAR FOLIOS</div>
+            <div class="tab" onclick="mostrarTab('Calificar')">✏️ CALIFICAR EXÁMENES</div>
+            <div class="tab" onclick="mostrarTab('Resultados')">📊 VER RESULTADOS</div>
+        </div>
+
+        <!-- TAB CREAR / EDITAR EXAMEN -->
+        <div id="tabCrear">
+            <h2>📚 SELECCIONAR MATERIA</h2>
+            <select id="selectMateria" onchange="cargarExamenDeMateria()">
+                <option value="">-- Selecciona una materia --</option>
+            </select>
+            <div id="panelPreguntasExamen" class="hidden">
+                <h2>❓ PREGUNTAS DISPONIBLES PARA ESTA MATERIA</h2>
+                <div id="listaPreguntasExamen"></div>
+                <div class="flex-row" style="margin-top: 20px;">
+                    <button onclick="guardarExamenMateria()" class="btn-success">💾 GUARDAR EXAMEN</button>
+                    <button onclick="exportarExamenPDF()" class="btn-warning" id="btnExportarPDF" style="display:none">📄 EXPORTAR PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB BANCO DE PREGUNTAS -->
+        <div id="tabBanco" class="hidden">
+            <h2>📚 GESTIÓN DEL BANCO GLOBAL</h2>
+            <div class="info-box">
+                <strong>Agregar nueva pregunta (si la materia no existe, se crea automáticamente)</strong>
+            </div>
+            <div class="flex-row">
+                <input type="text" id="nuevaMateriaBanco" placeholder="Nombre de la materia (ej: Física)" style="flex:1;">
+                <input type="text" id="textoPreguntaBanco" placeholder="Texto de la pregunta" style="flex:2;">
+            </div>
+            <select id="tipoPreguntaBanco" onchange="mostrarOpcionesBanco()">
+                <option value="abierta">📝 Abierta</option>
+                <option value="multiple">🔘 Opción Múltiple</option>
+            </select>
+            <div id="opcionesMultipleBanco" class="hidden">
+                <input type="text" id="opcionABanco" placeholder="Opción A">
+                <input type="text" id="opcionBBanco" placeholder="Opción B">
+                <input type="text" id="opcionCBanco" placeholder="Opción C">
+                <input type="text" id="opcionDBanco" placeholder="Opción D">
+                <select id="respuestaCorrectaBanco">
+                    <option value="A">A) Correcta</option>
+                    <option value="B">B) Correcta</option>
+                    <option value="C">C) Correcta</option>
+                    <option value="D">D) Correcta</option>
+                </select>
+            </div>
+            <button onclick="guardarPreguntaBanco()" class="btn-success">GUARDAR PREGUNTA EN BANCO</button>
+            <h2>📋 LISTA DE PREGUNTAS DEL BANCO</h2>
+            <div class="flex-row">
+                <select id="filtroMateriaBanco"><option value="">Todas las materias</option></select>
+                <button onclick="cargarBancoPreguntas()" class="btn-success">BUSCAR</button>
+            </div>
+            <div id="listaBancoPreguntas" class="info-box"></div>
+        </div>
+
+        <!-- TAB GENERAR FOLIOS -->
+        <div id="tabFolios" class="hidden">
+            <h2>🔑 GENERAR FOLIO PARA ALUMNO</h2>
+            <div class="flex-row">
+                <select id="selectMateriaFolio" style="flex:2">
+                    <option value="">-- Selecciona una materia --</option>
+                </select>
+                <select id="selectAlumnoFolio" style="flex:2">
+                    <option value="">-- Selecciona un alumno --</option>
+                </select>
+                <button onclick="generarFolio()" class="btn-success">GENERAR FOLIO</button>
+            </div>
+            <div id="folioGenerado" class="hidden">
+                <div class="folio-card" id="folioDisplay">XXXX-XXXX-XXXX</div>
+                <button onclick="copiarFolio()">📋 COPIAR</button>
+            </div>
+            <h3>📋 FOLIOS GENERADOS PARA ESTA MATERIA</h3>
+            <div id="listaFolios"></div>
+        </div>
+
+        <!-- TAB CALIFICAR EXÁMENES -->
+        <div id="tabCalificar" class="hidden">
+            <h2>✏️ CALIFICAR EXÁMENES PENDIENTES</h2>
+            <div class="flex-row">
+                <select id="selectMateriaCalificar"><option value="">-- Selecciona materia --</option></select>
+                <button onclick="cargarResultadosPendientes()" class="btn-success">BUSCAR PENDIENTES</button>
+            </div>
+            <div id="resultadosPendientes"></div>
+        </div>
+
+        <!-- TAB VER RESULTADOS -->
+        <div id="tabResultados" class="hidden">
+            <h2>📊 RESULTADOS FINALES</h2>
+            <div class="flex-row">
+                <select id="selectMateriaResultados"><option value="">-- Selecciona materia --</option></select>
+                <button onclick="cargarResultadosFinales()" class="btn-success">MOSTRAR</button>
+            </div>
+            <div id="resultadosFinales"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, getDoc, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBQcATGJPrVAgtGOdDnLf_-dwnStm63fJ8",
+        authDomain: "programacion-wed-16af8.firebaseapp.com",
+        projectId: "programacion-wed-16af8"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const usuario = JSON.parse(sessionStorage.getItem('usuarioActual'));
+    if (!usuario || usuario.rol !== 'docente') window.location.href = 'index.html';
+    document.getElementById('docenteInfo').innerHTML = `<strong>Bienvenido:</strong> ${usuario.nombre}`;
+
+    let materiaActualId = null;
+    let materiaActualNombre = null;
+    let preguntasSeleccionadas = new Set();
+
+    // ========== UTILIDADES ==========
+    function validarTexto(texto) { return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(texto); }
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function validarNota(nota) { let n = parseFloat(nota); return !isNaN(n) && n >= 0 && n <= 10; }
+
+    window.mostrarTab = function(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        ['Crear','Banco','Folios','Calificar','Resultados'].forEach(t => document.getElementById(`tab${t}`).classList.add('hidden'));
+        document.getElementById(`tab${tab}`).classList.remove('hidden');
+        if (tab === 'Crear') cargarSelectorMaterias();
+        if (tab === 'Banco') cargarFiltroMateriasBanco();
+        if (tab === 'Folios') cargarMateriasFolio();
+        if (tab === 'Calificar') cargarMateriasCalificar();
+        if (tab === 'Resultados') cargarMateriasResultados();
+    };
+
+    // ====== OBTENER MATERIAS ÚNICAS DESDE banco_preguntas ======
+    async function obtenerMateriasUnicas() {
+        const snapshot = await getDocs(collection(db, "banco_preguntas"));
+        const materiasMap = new Map();
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.materiaId && data.materiaNombre) {
+                materiasMap.set(data.materiaId, data.materiaNombre);
+            }
+        });
+        return Array.from(materiasMap.entries()).map(([id, nombre]) => ({ id, nombre }));
+    }
+
+    // ====== CARGAR SELECTOR DE MATERIAS (Crear/Editar) ======
+    async function cargarSelectorMaterias() {
+        const materias = await obtenerMateriasUnicas();
+        let options = '<option value="">-- Selecciona una materia --</option>';
+        materias.forEach(m => options += `<option value="${m.id}">${m.nombre}</option>`);
+        document.getElementById('selectMateria').innerHTML = options;
+        document.getElementById('panelPreguntasExamen').classList.add('hidden');
+        document.getElementById('btnExportarPDF').style.display = 'none';
+        preguntasSeleccionadas.clear();
+        materiaActualId = null;
+    }
+
+    // ====== CARGAR EXAMEN GUARDADO PARA LA MATERIA SELECCIONADA ======
+    window.cargarExamenDeMateria = async function() {
+        const materiaId = document.getElementById('selectMateria').value;
+        if (!materiaId) return;
+        materiaActualId = materiaId;
+        const materias = await obtenerMateriasUnicas();
+        const materia = materias.find(m => m.id === materiaId);
+        materiaActualNombre = materia ? materia.nombre : 'Sin nombre';
+        document.getElementById('panelPreguntasExamen').classList.remove('hidden');
+
+        // Cargar preguntas del banco para esta materia
+        const preguntasRef = collection(db, "banco_preguntas");
+        const q = query(preguntasRef, where("materiaId", "==", materiaId));
+        const preguntas = await getDocs(q);
+        if (preguntas.empty) {
+            document.getElementById('listaPreguntasExamen').innerHTML = '<div class="info-box">No hay preguntas en el banco para esta materia. Agrégalas desde la pestaña "BANCO DE PREGUNTAS".</div>';
+            document.getElementById('btnExportarPDF').style.display = 'none';
+            return;
+        }
+
+        // Obtener el examen guardado para esta materia (si existe)
+        const examenRef = doc(db, "panel", "docentes", "maestros", usuario.id, "examenes_por_materia", materiaId);
+        const examenDoc = await getDoc(examenRef);
+        const preguntasGuardadas = examenDoc.exists() ? examenDoc.data().preguntasIds || [] : [];
+        preguntasSeleccionadas.clear();
+        preguntasGuardadas.forEach(id => preguntasSeleccionadas.add(id));
+
+        let html = `<div class="flex-row"><button class="btn-sm" onclick="seleccionarTodas(true)">✅ Seleccionar todas</button><button class="btn-sm" onclick="seleccionarTodas(false)">❌ Limpiar</button></div>`;
+        preguntas.forEach(doc => {
+            const p = doc.data();
+            const checked = preguntasSeleccionadas.has(doc.id) ? 'checked' : '';
+            html += `<div class="pregunta-item">
+                        <input type="checkbox" class="pregunta-checkbox" data-id="${doc.id}" ${checked} onchange="toggleSeleccion('${doc.id}')">
+                        <div class="pregunta-texto"><strong>❓ ${escapeHtml(p.texto)}</strong><br>Tipo: ${p.tipo === 'abierta' ? '📝 Abierta' : '🔘 Múltiple'}${p.tipo==='multiple'?`<br>Opciones: A)${escapeHtml(p.opciones.A)} B)${escapeHtml(p.opciones.B)} C)${escapeHtml(p.opciones.C)} D)${escapeHtml(p.opciones.D)}<br>✅ Correcta: ${p.respuestaCorrecta}`:''}</div>
+                     </div>`;
+        });
+        document.getElementById('listaPreguntasExamen').innerHTML = html;
+        document.getElementById('btnExportarPDF').style.display = 'inline-block';
+    };
+
+    window.toggleSeleccion = function(id) {
+        const cb = document.querySelector(`.pregunta-checkbox[data-id='${id}']`);
+        if (preguntasSeleccionadas.has(id)) {
+            preguntasSeleccionadas.delete(id);
+            if (cb) cb.checked = false;
+        } else {
+            preguntasSeleccionadas.add(id);
+            if (cb) cb.checked = true;
+        }
+    };
+
+    window.seleccionarTodas = function(seleccionar) {
+        document.querySelectorAll('.pregunta-checkbox').forEach(cb => {
+            const id = cb.getAttribute('data-id');
+            if (seleccionar) {
+                preguntasSeleccionadas.add(id);
+                cb.checked = true;
+            } else {
+                preguntasSeleccionadas.delete(id);
+                cb.checked = false;
+            }
+        });
+    };
+
+    // ====== GUARDAR EXAMEN PARA LA MATERIA ACTUAL ======
+    window.guardarExamenMateria = async function() {
+        console.log("guardarExamenMateria llamado");
+        if (!materiaActualId) {
+            alert("Primero selecciona una materia.");
+            console.warn("materiaActualId es null");
+            return;
+        }
+        if (preguntasSeleccionadas.size === 0) {
+            alert("No has seleccionado ninguna pregunta.");
+            return;
+        }
+        const preguntasIds = Array.from(preguntasSeleccionadas);
+        // Obtener copia completa de las preguntas (para guardar en el folio después)
+        const preguntasCopia = [];
+        for (const id of preguntasIds) {
+            const docSnap = await getDoc(doc(db, "banco_preguntas", id));
+            if (docSnap.exists()) preguntasCopia.push({ id: docSnap.id, ...docSnap.data() });
+        }
+        const examenData = {
+            materiaId: materiaActualId,
+            materiaNombre: materiaActualNombre,
+            preguntasIds: preguntasIds,
+            preguntasCopia: preguntasCopia,
+            fechaActualizacion: new Date()
+        };
+        try {
+            // Guardar examen
+            const examenRef = doc(db, "panel", "docentes", "maestros", usuario.id, "examenes_por_materia", materiaActualId);
+            await setDoc(examenRef, examenData);
+            // IMPORTANTE: Crear también un documento en la subcolección "materias" para que alumno.html pueda encontrar los folios
+            const materiaDocRef = doc(db, "panel", "docentes", "maestros", usuario.id, "materias", materiaActualId);
+            await setDoc(materiaDocRef, { nombre: materiaActualNombre, existe: true }, { merge: true });
+            alert(`✅ Examen para la materia "${materiaActualNombre}" guardado correctamente.`);
+            console.log("Examen guardado:", examenData);
+        } catch (error) {
+            console.error("Error al guardar examen:", error);
+            alert("Error al guardar examen. Revisa la consola.");
+        }
+    };
+
+    // ====== EXPORTAR PDF DEL EXAMEN ACTUAL ======
+    window.exportarExamenPDF = async function() {
+        if (!materiaActualId) return alert("Primero selecciona una materia.");
+        const preguntasIds = Array.from(preguntasSeleccionadas);
+        if (preguntasIds.length === 0) return alert("No hay preguntas seleccionadas.");
+        const preguntasData = [];
+        for (const id of preguntasIds) {
+            const docSnap = await getDoc(doc(db, "banco_preguntas", id));
+            if (docSnap.exists()) preguntasData.push(docSnap.data());
+        }
+        let preguntasHtml = '';
+        preguntasData.forEach((p, idx) => {
+            preguntasHtml += `<div class="pregunta-card"><strong>${idx+1}. ${escapeHtml(p.texto)}</strong><br>Tipo: ${p.tipo === 'abierta' ? '📝 Abierta' : '🔘 Múltiple'}`;
+            if (p.tipo === 'multiple' && p.opciones) {
+                preguntasHtml += `<br>Opciones: A) ${escapeHtml(p.opciones.A)} B) ${escapeHtml(p.opciones.B)} C) ${escapeHtml(p.opciones.C)} D) ${escapeHtml(p.opciones.D)}`;
+            }
+            preguntasHtml += `</div>`;
+        });
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html><head><title>Examen: ${materiaActualNombre}</title>
+            <style>body { font-family: Arial; margin: 20px; } .pregunta-card { border-left: 4px solid #3498db; padding: 10px; margin: 15px 0; background: #f9f9f9; break-inside: avoid; } hr { margin: 20px 0; } </style>
+            </head><body>
+            <h1 style="text-align:center">Examen: ${materiaActualNombre}</h1>
+            <h3 style="text-align:center">Docente: ${usuario.nombre}</h3><hr>
+            <div>${preguntasHtml}</div><hr>
+            <div style="text-align:center; font-size:12px;">Fecha: ${new Date().toLocaleString()}</div>
+            </body></html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+    };
+
+    // ====== BANCO DE PREGUNTAS (global) ======
+    async function cargarFiltroMateriasBanco() {
+        const materias = await obtenerMateriasUnicas();
+        let options = '<option value="">Todas las materias</option>';
+        materias.forEach(m => options += `<option value="${m.id}">${m.nombre}</option>`);
+        document.getElementById('filtroMateriaBanco').innerHTML = options;
+        await cargarBancoPreguntas();
+    }
+
+    window.cargarBancoPreguntas = async function() {
+        const materiaId = document.getElementById('filtroMateriaBanco').value;
+        let preguntas = [];
+        const bancoRef = collection(db, "banco_preguntas");
+        if (materiaId) {
+            const q = query(bancoRef, where("materiaId", "==", materiaId));
+            const snapshot = await getDocs(q);
+            snapshot.forEach(d => preguntas.push({ id: d.id, ...d.data() }));
+        } else {
+            const snapshot = await getDocs(bancoRef);
+            snapshot.forEach(d => preguntas.push({ id: d.id, ...d.data() }));
+        }
+        let html = '';
+        if (preguntas.length === 0) {
+            html = '<div class="info-box">No hay preguntas en el banco.</div>';
+        } else {
+            preguntas.forEach(p => {
+                html += `<div class="pregunta-item"><div class="pregunta-texto"><strong>❓ ${escapeHtml(p.texto)}</strong><br>Tipo: ${p.tipo}<br><small>Materia: ${p.materiaNombre || 'N/A'}</small></div></div>`;
+            });
+        }
+        document.getElementById('listaBancoPreguntas').innerHTML = html;
+    };
+
+    window.guardarPreguntaBanco = async function() {
+        let materiaNombre = document.getElementById('nuevaMateriaBanco').value.trim();
+        if (!materiaNombre) return alert("Ingresa el nombre de la materia");
+        if (!validarTexto(materiaNombre)) return alert("Solo letras y espacios");
+        const texto = document.getElementById('textoPreguntaBanco').value.trim();
+        if (!texto) return alert("Ingresa el texto de la pregunta");
+        const tipo = document.getElementById('tipoPreguntaBanco').value;
+        const materiaId = materiaNombre.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const bancoRef = collection(db, "banco_preguntas");
+        const existente = await getDocs(query(bancoRef, where("texto", "==", texto), where("materiaId", "==", materiaId)));
+        if (!existente.empty) return alert("❌ Ya existe esa pregunta en el banco para esta materia.");
+        let pregunta = { texto, tipo, materiaId, materiaNombre, fecha: new Date() };
+        if (tipo === 'multiple') {
+            pregunta.opciones = {
+                A: document.getElementById('opcionABanco').value,
+                B: document.getElementById('opcionBBanco').value,
+                C: document.getElementById('opcionCBanco').value,
+                D: document.getElementById('opcionDBanco').value
+            };
+            pregunta.respuestaCorrecta = document.getElementById('respuestaCorrectaBanco').value;
+        }
+        await addDoc(bancoRef, pregunta);
+        alert("✅ Pregunta agregada al banco");
+        document.getElementById('textoPreguntaBanco').value = '';
+        document.getElementById('nuevaMateriaBanco').value = '';
+        ['opcionABanco','opcionBBanco','opcionCBanco','opcionDBanco'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('tipoPreguntaBanco').value = 'abierta';
+        document.getElementById('opcionesMultipleBanco').classList.add('hidden');
+        // Refrescar selectores de materias
+        await cargarSelectorMaterias();
+        await cargarFiltroMateriasBanco();
+        await cargarMateriasFolio();
+        await cargarMateriasCalificar();
+        await cargarMateriasResultados();
+    };
+
+    window.mostrarOpcionesBanco = function() {
+        document.getElementById('opcionesMultipleBanco').classList.toggle('hidden', document.getElementById('tipoPreguntaBanco').value !== 'multiple');
+    };
+
+    // ====== GENERAR FOLIOS ======
+    async function cargarMateriasFolio() {
+        const materias = await obtenerMateriasUnicas();
+        let options = '<option value="">-- Selecciona una materia --</option>';
+        materias.forEach(m => options += `<option value="${m.id}">${m.nombre}</option>`);
+        document.getElementById('selectMateriaFolio').innerHTML = options;
+        const select = document.getElementById('selectMateriaFolio');
+        select.onchange = () => { cargarAlumnosParaFolio(); cargarFolios(); };
+        if (select.value) { cargarAlumnosParaFolio(); cargarFolios(); }
+    }
+
+    async function cargarAlumnosParaFolio() {
+        const materiaId = document.getElementById('selectMateriaFolio').value;
+        if (!materiaId) return;
+        const alumnosRef = collection(db, "panel", "alumnos", "alumnos");
+        const alumnos = await getDocs(alumnosRef);
+        let options = '<option value="">-- Selecciona un alumno --</option>';
+        alumnos.forEach(doc => options += `<option value="${doc.id}">${doc.data().nombre} (${doc.data().correo})</option>`);
+        document.getElementById('selectAlumnoFolio').innerHTML = options;
+    }
+
+    window.generarFolio = async function() {
+        const materiaId = document.getElementById('selectMateriaFolio').value;
+        const alumnoId = document.getElementById('selectAlumnoFolio').value;
+        if (!materiaId || !alumnoId) return alert("Selecciona materia y alumno");
+        // Obtener el examen guardado para esa materia
+        const examenRef = doc(db, "panel", "docentes", "maestros", usuario.id, "examenes_por_materia", materiaId);
+        const examenDoc = await getDoc(examenRef);
+        if (!examenDoc.exists()) {
+            alert("❌ No hay examen guardado para esta materia. Primero crea/edita el examen en la pestaña 'CREAR / EDITAR EXAMEN'.");
+            return;
+        }
+        const examen = examenDoc.data();
+        if (!examen.preguntasCopia || examen.preguntasCopia.length === 0) {
+            alert("El examen no tiene preguntas seleccionadas.");
+            return;
+        }
+        try {
+            const alumnoDoc = await getDoc(doc(db, "panel", "alumnos", "alumnos", alumnoId));
+            if (!alumnoDoc.exists()) return alert("El alumno no existe");
+            const alumnoNombre = alumnoDoc.data().nombre;
+            const materias = await obtenerMateriasUnicas();
+            const materia = materias.find(m => m.id === materiaId);
+            const nombreMateria = materia ? materia.nombre : 'MAT';
+            const materiaAbrev = nombreMateria.substring(0,4).toUpperCase();
+            const fecha = new Date();
+            const fechaStr = `${fecha.getFullYear()}${(fecha.getMonth()+1).toString().padStart(2,'0')}${fecha.getDate().toString().padStart(2,'0')}`;
+            const random = Math.floor(1000 + Math.random() * 9000);
+            const codigo = `${materiaAbrev}-${fechaStr}-${random}`;
+            // Asegurar que exista el documento materia (ya debería existir por guardar examen, pero por si acaso)
+            const materiaDocRef = doc(db, "panel", "docentes", "maestros", usuario.id, "materias", materiaId);
+            await setDoc(materiaDocRef, { nombre: nombreMateria }, { merge: true });
+            const foliosRef = collection(db, "panel", "docentes", "maestros", usuario.id, "materias", materiaId, "folios");
+            const existente = await getDocs(query(foliosRef, where("alumnoId", "==", alumnoId), where("usado", "==", false)));
+            if (!existente.empty) {
+                if (!confirm("Este alumno ya tiene un folio activo. ¿Actualizar?")) return;
+                const folioDoc = existente.docs[0];
+                await updateDoc(doc(foliosRef, folioDoc.id), { codigo, usado: false, fechaCreacion: new Date(), preguntas: examen.preguntasCopia });
+                alert(`✅ Folio actualizado: ${codigo}`);
+            } else {
+                await addDoc(foliosRef, { codigo, alumnoId, alumnoNombre, usado: false, fechaCreacion: new Date(), preguntas: examen.preguntasCopia });
+                alert(`✅ Folio generado: ${codigo}`);
+            }
+            document.getElementById('folioDisplay').innerText = codigo;
+            document.getElementById('folioGenerado').classList.remove('hidden');
+            cargarFolios();
+        } catch(e) { console.error(e); alert("Error al generar folio: " + e.message); }
+    };
+
+    async function cargarFolios() {
+        const materiaId = document.getElementById('selectMateriaFolio').value;
+        if (!materiaId) { document.getElementById('listaFolios').innerHTML = '<div class="info-box">Selecciona una materia.</div>'; return; }
+        const foliosRef = collection(db, "panel", "docentes", "maestros", usuario.id, "materias", materiaId, "folios");
+        const folios = await getDocs(foliosRef);
+        if (folios.empty) { document.getElementById('listaFolios').innerHTML = '<div class="info-box">No hay folios.</div>'; return; }
+        let html = '';
+        folios.forEach(doc => {
+            const f = doc.data();
+            const fecha = f.fechaCreacion ? new Date(f.fechaCreacion.seconds * 1000).toLocaleString() : 'Fecha desconocida';
+            html += `<div class="folio-card"><div class="folio-info">🔑 ${f.codigo}<br>👤 ${f.alumnoNombre}<br>📅 ${fecha}</div><div class="folio-estado"><span class="${f.usado ? 'estado-usado' : 'estado-disponible'}">${f.usado ? '🔴 USADO' : '🟢 DISPONIBLE'}</span></div></div>`;
+        });
+        document.getElementById('listaFolios').innerHTML = html;
+    }
+
+    window.copiarFolio = function() {
+        navigator.clipboard.writeText(document.getElementById('folioDisplay').innerText);
+        alert("Folio copiado");
+    };
+
+    // ====== CALIFICAR EXÁMENES ======
+    async function cargarMateriasCalificar() {
+        const materias = await obtenerMateriasUnicas();
+        let options = '<option value="">-- Selecciona materia --</option>';
+        materias.forEach(m => options += `<option value="${m.id}">${m.nombre}</option>`);
+        document.getElementById('selectMateriaCalificar').innerHTML = options;
+    }
+
+    window.cargarResultadosPendientes = async function() {
+        const materiaId = document.getElementById('selectMateriaCalificar').value;
+        if (!materiaId) return;
+        const materias = await obtenerMateriasUnicas();
+        const materia = materias.find(m => m.id === materiaId);
+        const nombreMateria = materia ? materia.nombre : '';
+        const resultadosRef = collection(db, "Resultado");
+        const q = query(resultadosRef, where("materia", "==", nombreMateria), where("estado", "==", "pendiente"));
+        const resultados = await getDocs(q);
+        if (resultados.empty) { document.getElementById('resultadosPendientes').innerHTML = '<div class="info-box">No hay pendientes.</div>'; return; }
+        let html = '';
+        for (const docSnap of resultados.docs) {
+            const r = docSnap.data();
+            html += `<div class="resultado-card"><strong>👤 ${r.alumnoNombre}</strong><br>📅 ${new Date(r.fecha.seconds * 1000).toLocaleString()}<br><button onclick="calificarExamen('${docSnap.id}', '${r.alumnoNombre}')" class="btn-warning">✏️ CALIFICAR</button></div>`;
+        }
+        document.getElementById('resultadosPendientes').innerHTML = html;
+    };
+
+    window.calificarExamen = async function(resultadoId, alumnoNombre) {
+        const resultadoRef = doc(db, "Resultado", resultadoId);
+        const resultadoSnap = await getDoc(resultadoRef);
+        const resultado = resultadoSnap.data();
+        let preguntasAbiertas = resultado.respuestas.filter(r => r.correcta === null);
+        if (preguntasAbiertas.length === 0) return alert("No hay preguntas abiertas.");
+        let calificaciones = [];
+        for (let i = 0; i < preguntasAbiertas.length; i++) {
+            let nota = prompt(`Calificación (0-10) para:\n"${preguntasAbiertas[i].pregunta}"\nRespuesta: ${preguntasAbiertas[i].respuesta}`);
+            if (nota === null) return;
+            nota = parseFloat(nota);
+            if (!validarNota(nota)) { alert("Nota inválida (debe ser 0-10)."); i--; continue; }
+            calificaciones.push(nota);
+        }
+        let totalCorrectas = resultado.correctas || 0;
+        let totalMultiple = resultado.totalMultiple || 0;
+        let totalAbiertas = preguntasAbiertas.length;
+        let sumaAbiertas = calificaciones.reduce((a,b) => a + b, 0);
+        let aciertosAbiertas = sumaAbiertas / 10;
+        let nuevaCorrectas = totalCorrectas + aciertosAbiertas;
+        let nuevoPorcentaje = Math.round((nuevaCorrectas / (totalMultiple + totalAbiertas)) * 100);
+        let nuevasRespuestas = resultado.respuestas.map(r => {
+            if (r.correcta === null) {
+                let idx = preguntasAbiertas.findIndex(p => p.preguntaId === r.preguntaId);
+                let nota = calificaciones[idx];
+                r.correcta = (nota >= 6);
+                r.calificacionManual = nota;
+            }
+            return r;
+        });
+        await updateDoc(resultadoRef, { estado: "calificado", porcentaje: nuevoPorcentaje, respuestas: nuevasRespuestas, correctas: nuevaCorrectas, fechaCalificacion: new Date() });
+        alert(`✅ Calificado. Porcentaje: ${nuevoPorcentaje}%`);
+        cargarResultadosPendientes();
+    };
+
+    // ====== VER RESULTADOS FINALES ======
+    async function cargarMateriasResultados() {
+        const materias = await obtenerMateriasUnicas();
+        let options = '<option value="">-- Selecciona materia --</option>';
+        materias.forEach(m => options += `<option value="${m.id}">${m.nombre}</option>`);
+        document.getElementById('selectMateriaResultados').innerHTML = options;
+    }
+
+    window.cargarResultadosFinales = async function() {
+        const materiaId = document.getElementById('selectMateriaResultados').value;
+        if (!materiaId) return;
+        const materias = await obtenerMateriasUnicas();
+        const materia = materias.find(m => m.id === materiaId);
+        const nombreMateria = materia ? materia.nombre : '';
+        const resultadosRef = collection(db, "Resultado");
+        const q = query(resultadosRef, where("materia", "==", nombreMateria));
+        const resultados = await getDocs(q);
+        if (resultados.empty) { document.getElementById('resultadosFinales').innerHTML = '<div class="info-box">No hay resultados.</div>'; return; }
+        let html = '';
+        resultados.forEach(doc => {
+            const r = doc.data();
+            const estado = r.estado === 'calificado' ? '✅ Calificado' : '⏳ Pendiente';
+            html += `<div class="resultado-card"><strong>👤 ${r.alumnoNombre}</strong><br>📅 ${new Date(r.fecha.seconds * 1000).toLocaleString()}<br>📊 Porcentaje: ${r.porcentaje || 0}%<br><span class="calificacion-${r.estado}">${estado}</span></div>`;
+        });
+        document.getElementById('resultadosFinales').innerHTML = html;
+    };
+
+    // Inicialización
+    cargarSelectorMaterias();
+    cargarMateriasFolio();
+    cargarMateriasCalificar();
+    cargarMateriasResultados();
+</script>
+</body>
+</html>
